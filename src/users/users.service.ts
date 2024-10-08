@@ -10,8 +10,13 @@ export class UsersService {
     private usersRepository: Repository<User>,
   ) {}
 
-  async findOne(username: string): Promise<User | undefined> {
+  async findOneByUsername(username: string): Promise<User | undefined> {
     return this.usersRepository.findOne({ where: { username } });
+  }
+
+  // Find a user by ID
+  async findOneById(id: number): Promise<User | undefined> {
+    return this.usersRepository.findOne({ where: { id } });
   }
 
   async createUser(username: string, password: string): Promise<User> {
