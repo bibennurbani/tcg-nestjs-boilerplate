@@ -2,10 +2,12 @@ import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
 import { UsersService } from '../users/users.service'; // Import Users service
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class AuthService {
   constructor(
+    private configService: ConfigService,
     private usersService: UsersService,
     private jwtService: JwtService,
   ) {}
@@ -30,5 +32,9 @@ export class AuthService {
   async register(username: string, password: string) {
     const hashedPassword = bcrypt.hashSync(password, 10);
     return this.usersService.createUser(username, hashedPassword);
+  }
+
+  getJwtSecret() {
+    return this.configService.get('JWT_SECRET');
   }
 }

@@ -1,29 +1,32 @@
 import { Module } from '@nestjs/common';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { User } from './users/user.entity';
-import { AuthModule } from './auth/auth.module';
-import { UsersService } from './users/users.service';
-import { UsersModule } from './users/users.module';
+import { User } from './users/user.entity'; // Example entity, replace with yours
 
 @Module({
   imports: [
-    TypeOrmModule.forRoot({
-      type: 'postgres',
-      host: 'localhost',
-      port: 5432,
-      username: 'myuser', // Update with your DB credentials
-      password: 'mypassword', // Update with your DB password
-      database: 'mydatabase',
-      entities: [User],
-      synchronize: true, // Set to false in production
+    ConfigModule.forRoot({
+      isGlobal: true, // Makes config available globally
+      envFilePath: [
+        `.env.${process.env.NODE_ENV}.local`,
+        `.env.${process.env.NODE_ENV}`,
+        '.env',
+      ],
     }),
-    TypeOrmModule.forFeature([User]),
-    AuthModule,
-    UsersModule,
+    TypeOrmModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
+        type: configService.get<string>('DATABASE_TYPE') as any, // Database type from .env
+        host: configService.get<string>('DATABASE_HOST'),
+        port: configService.get<number>('DATABASE_PORT'),
+        username: configService.get<string>('DATABASE_USER'),
+        password: configService.get<string>('DATABASE_PASSWORD'),
+        database: configService.get<string>('DATABASE_NAME'),
+        entities: [User], // You can load entities here or use forFeature in modules
+        synchronize: true, // Should be false in production
+      }),
+    }),
   ],
-  controllers: [AppController],
-  providers: [AppService, UsersService],
 })
 export class AppModule {}
