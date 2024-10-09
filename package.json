@@ -5,12 +5,12 @@
   "author": "Biben Nurbani Hasan",
   "private": true,
   "license": "MIT",
-  "packageManager": "pnpm@9.11.0",
+  "packageManager": "pnpm@9.12.1",
   "scripts": {
     "build": "nest build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
-    "start:dev": "nest start --watch",
+    "start:dev": "NODE_ENV=dev nest start --watch",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
@@ -22,6 +22,7 @@
   },
   "dependencies": {
     "@nestjs/common": "^10.4.4",
+    "@nestjs/config": "^3.2.3",
     "@nestjs/core": "^10.4.4",
     "@nestjs/jwt": "^10.2.0",
     "@nestjs/passport": "^10.0.3",
@@ -43,11 +44,11 @@
     "@types/bcryptjs": "^2.4.6",
     "@types/express": "^4.17.21",
     "@types/jest": "^29.5.13",
-    "@types/node": "^20.16.10",
+    "@types/node": "^20.16.11",
     "@types/passport-jwt": "^4.0.1",
     "@types/supertest": "^6.0.2",
-    "@typescript-eslint/eslint-plugin": "^8.8.0",
-    "@typescript-eslint/parser": "^8.8.0",
+    "@typescript-eslint/eslint-plugin": "^8.8.1",
+    "@typescript-eslint/parser": "^8.8.1",
     "eslint": "^8.57.1",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-prettier": "^5.2.1",
@@ -59,7 +60,7 @@
     "ts-loader": "^9.5.1",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
-    "typescript": "^5.6.2"
+    "typescript": "^5.6.3"
   },
   "jest": {
     "moduleFileExtensions": [
