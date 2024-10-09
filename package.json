@@ -1,6 +1,6 @@
 {
   "name": "tcg-nestjs-boilerplate",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "description": "Created for starting project using nestjs",
   "author": "Biben Nurbani Hasan",
   "private": true,
