@@ -1,8 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
-import { UsersService } from '../users/users.service'; // Import Users service
 import { ConfigService } from '@nestjs/config';
+import { EmailService } from '../email/email.service';
+import { UsersService } from '../users/users.service';
 
 @Injectable()
 export class AuthService {
@@ -10,6 +11,7 @@ export class AuthService {
     private configService: ConfigService,
     private usersService: UsersService,
     private jwtService: JwtService,
+    private emailService: EmailService,
   ) {}
 
   async validateUser(username: string, pass: string): Promise<any> {
@@ -31,7 +33,23 @@ export class AuthService {
 
   async register(username: string, password: string) {
     const hashedPassword = bcrypt.hashSync(password, 10);
-    return this.usersService.createUser(username, hashedPassword);
+    const user = await this.usersService.createUser(username, hashedPassword);
+
+    const verificationToken = this.jwtService.sign({ userId: user.id });
+    await this.emailService.sendVerificationEmail(
+      user.email,
+      verificationToken,
+    );
+
+    return user;
+  }
+
+  async sendPasswordResetEmail(email: string) {
+    const user = await this.usersService.findOneByEmail(email);
+    if (!user) throw new Error('User not found');
+
+    const resetToken = this.jwtService.sign({ userId: user.id });
+    await this.emailService.sendPasswordResetEmail(user.email, resetToken);
   }
 
   getJwtSecret() {

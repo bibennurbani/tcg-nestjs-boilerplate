@@ -70,7 +70,7 @@ describe('UsersService', () => {
 
   describe('findOneById', () => {
     it('should return a user by id', async () => {
-      const id = 1;
+      const id = '1';
       const foundUser = { id, username: 'testuser' };
 
       mockUserRepository.findOne.mockResolvedValue(foundUser); // Mock the findOne method
