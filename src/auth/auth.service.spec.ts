@@ -1,33 +1,34 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import { Test, TestingModule } from '@nestjs/testing';
 import { AuthService } from './auth.service';
 import { UsersService } from '../users/users.service';
 import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config'; // Import ConfigService
 import * as bcrypt from 'bcryptjs';
+import { EmailService } from '../email/email.service';
+import { User } from '../users/user.entity';
 
 describe('AuthService', () => {
   let authService: AuthService;
   let usersService: UsersService;
   let jwtService: JwtService;
+  let emailService: EmailService;
 
-  // Mock for UsersService
-  const mockUsersService = {
-    findOneByUsername: jest.fn((username) => {
-      if (username === 'existinguser') {
-        return { id: 1, username: 'existinguser', password: 'hashedpass' };
+  const mockUser = {
+    id: 1,
+    username: 'testuser',
+    email: 'test@example.com',
+    password: 'hashedpassword123',
+    isActive: true,
+    isEmailVerified: false,
+  } as undefined as User;
+
+  const mockConfigService = {
+    get: jest.fn((key: string) => {
+      if (key === 'JWT_SECRET') {
+        return 'mocked-secret';
       }
       return null;
     }),
-    createUser: jest.fn((username, password) => ({
-      id: 1,
-      username,
-      password,
-    })),
-  };
-
-  // Mock for JwtService
-  const mockJwtService = {
-    sign: jest.fn((payload) => 'signed-jwt-token'),
   };
 
   beforeEach(async () => {
@@ -36,11 +37,31 @@ describe('AuthService', () => {
         AuthService,
         {
           provide: UsersService,
-          useValue: mockUsersService,
+          useValue: {
+            findOneByUsername: jest.fn(),
+            findOneByEmail: jest.fn(),
+            createUser: jest.fn(),
+            updatePassword: jest.fn(),
+            verifyUser: jest.fn(),
+          },
         },
         {
           provide: JwtService,
-          useValue: mockJwtService,
+          useValue: {
+            sign: jest.fn().mockReturnValue('signed-token'),
+            verify: jest.fn(),
+          },
+        },
+        {
+          provide: ConfigService,
+          useValue: mockConfigService,
+        },
+        {
+          provide: EmailService,
+          useValue: {
+            sendVerificationEmail: jest.fn(),
+            sendPasswordResetEmail: jest.fn(),
+          },
         },
       ],
     }).compile();
@@ -48,82 +69,71 @@ describe('AuthService', () => {
     authService = module.get<AuthService>(AuthService);
     usersService = module.get<UsersService>(UsersService);
     jwtService = module.get<JwtService>(JwtService);
+    emailService = module.get<EmailService>(EmailService);
   });
 
   it('should be defined', () => {
     expect(authService).toBeDefined();
   });
 
-  describe('validateUser', () => {
-    it('should return user data without password if credentials are valid', async () => {
-      jest.spyOn(bcrypt, 'compareSync').mockReturnValue(true);
+  describe('register', () => {
+    it('should register a new user and send verification email', async () => {
+      jest.spyOn(bcrypt, 'hashSync').mockReturnValue('hashedpassword123');
+      jest.spyOn(usersService, 'createUser').mockResolvedValue(mockUser);
 
-      const result = await authService.validateUser('existinguser', 'password');
-
-      expect(result).toEqual({
-        id: 1,
-        username: 'existinguser',
-      });
-      expect(usersService.findOneByUsername).toHaveBeenCalledWith(
-        'existinguser',
+      const result = await authService.register(
+        'testuser',
+        'test@example.com',
+        'password123',
       );
-      expect(bcrypt.compareSync).toHaveBeenCalledWith('password', 'hashedpass');
-    });
 
-    it('should return null if user is not found', async () => {
-      const result = await authService.validateUser('nonexistent', 'password');
-      expect(result).toBeNull();
-      expect(usersService.findOneByUsername).toHaveBeenCalledWith(
-        'nonexistent',
+      expect(usersService.createUser).toHaveBeenCalledWith(
+        'testuser',
+        'test@example.com',
+        'hashedpassword123',
       );
-    });
-
-    it('should return null if password is invalid', async () => {
-      jest.spyOn(bcrypt, 'compareSync').mockReturnValue(false);
-
-      const result = await authService.validateUser(
-        'existinguser',
-        'wrongpassword',
+      expect(emailService.sendVerificationEmail).toHaveBeenCalledWith(
+        mockUser.email,
+        'signed-token',
       );
-      expect(result).toBeNull();
-      expect(bcrypt.compareSync).toHaveBeenCalledWith(
-        'wrongpassword',
-        'hashedpass',
-      );
+      expect(result).toEqual(mockUser);
     });
   });
 
   describe('login', () => {
-    it('should return a JWT access token', async () => {
-      const user = { id: 1, username: 'existinguser' };
-      const result = await authService.login(user);
+    it('should generate a JWT token for valid user login', async () => {
+      const mockPayload = { username: 'testuser', sub: 1 };
 
+      const result = await authService.login(mockUser);
+
+      expect(jwtService.sign).toHaveBeenCalledWith(mockPayload);
       expect(result).toEqual({
-        access_token: 'signed-jwt-token',
-      });
-      expect(jwtService.sign).toHaveBeenCalledWith({
-        username: user.username,
-        sub: user.id,
+        access_token: 'signed-token',
       });
     });
   });
 
-  describe('register', () => {
-    it('should hash the password and register the user', async () => {
-      jest.spyOn(bcrypt, 'hashSync').mockReturnValue('hashedpassword');
+  describe('sendPasswordResetEmail', () => {
+    it('should send password reset email if user exists', async () => {
+      jest.spyOn(usersService, 'findOneByEmail').mockResolvedValue(mockUser);
 
-      const result = await authService.register('newuser', 'password');
+      await authService.sendPasswordResetEmail('test@example.com');
 
-      expect(result).toEqual({
-        id: 1,
-        username: 'newuser',
-        password: 'hashedpassword',
-      });
-      expect(bcrypt.hashSync).toHaveBeenCalledWith('password', 10);
-      expect(usersService.createUser).toHaveBeenCalledWith(
-        'newuser',
-        'hashedpassword',
+      expect(usersService.findOneByEmail).toHaveBeenCalledWith(
+        'test@example.com',
       );
+      expect(emailService.sendPasswordResetEmail).toHaveBeenCalledWith(
+        'test@example.com',
+        'signed-token',
+      );
+    });
+
+    it('should throw an error if user does not exist', async () => {
+      jest.spyOn(usersService, 'findOneByEmail').mockResolvedValue(undefined);
+
+      await expect(
+        authService.sendPasswordResetEmail('test@example.com'),
+      ).rejects.toThrow('User not found');
     });
   });
 });

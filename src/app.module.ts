@@ -2,6 +2,12 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { User } from './users/user.entity'; // Example entity, replace with yours
+import { MailerModule } from '@nestjs-modules/mailer';
+import { HandlebarsAdapter } from '@nestjs-modules/mailer/dist/adapters/handlebars.adapter';
+import { EmailService } from './email/email.service';
+import { EmailModule } from './email/email.module';
+import { AuthModule } from './auth/auth.module';
+import { UsersModule } from './users/users.module';
 
 @Module({
   imports: [
@@ -27,6 +33,10 @@ import { User } from './users/user.entity'; // Example entity, replace with your
         synchronize: true, // Should be false in production
       }),
     }),
+    EmailModule,
+    AuthModule,
+    UsersModule,
   ],
+  providers: [],
 })
 export class AppModule {}

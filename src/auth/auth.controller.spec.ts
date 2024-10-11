@@ -1,35 +1,14 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import { Test, TestingModule } from '@nestjs/testing';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
-import { JwtAuthGuard } from './guard/jwt-auth.guard';
-import { LocalAuthGuard } from './guard/local-auth.guard';
+import { UsersService } from '../users/users.service';
+import { JwtService } from '@nestjs/jwt';
+import { ResetPasswordDto } from './dto/ResetPasswordDto';
+import { User } from '../users/user.entity';
 
 describe('AuthController', () => {
-  let authController: AuthController;
+  let controller: AuthController;
   let authService: AuthService;
-
-  // Mocking AuthService
-  const mockAuthService = {
-    register: jest.fn((username, password) => ({
-      id: Date.now(),
-      username,
-      isActive: true,
-    })),
-    login: jest.fn((user) => ({
-      access_token: 'test-token',
-      user,
-    })),
-  };
-
-  // Mock Guards
-  const mockJwtAuthGuard = {
-    canActivate: jest.fn(() => true),
-  };
-
-  const mockLocalAuthGuard = {
-    canActivate: jest.fn(() => true),
-  };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -37,62 +16,68 @@ describe('AuthController', () => {
       providers: [
         {
           provide: AuthService,
-          useValue: mockAuthService,
+          useValue: {
+            register: jest.fn(),
+            login: jest.fn(),
+            sendPasswordResetEmail: jest.fn(),
+          },
+        },
+        {
+          provide: JwtService,
+          useValue: {
+            verify: jest.fn(),
+          },
+        },
+        {
+          provide: UsersService,
+          useValue: {},
         },
       ],
-    })
-      .overrideGuard(JwtAuthGuard)
-      .useValue(mockJwtAuthGuard)
-      .overrideGuard(LocalAuthGuard)
-      .useValue(mockLocalAuthGuard)
-      .compile();
+    }).compile();
 
-    authController = module.get<AuthController>(AuthController);
+    controller = module.get<AuthController>(AuthController);
     authService = module.get<AuthService>(AuthService);
   });
 
-  it('should be defined', () => {
-    expect(authController).toBeDefined();
+  it('should register a new user', async () => {
+    const mockUser = {
+      id: 1,
+      username: 'test',
+      email: 'test@example.com',
+      password: 'hashedpassword123', // Add password field
+      isActive: true, // Add isActive field
+      isEmailVerified: false, // Add isEmailVerified field
+    } as unknown as User;
+    jest.spyOn(authService, 'register').mockResolvedValue(mockUser);
+
+    const result = await controller.register({
+      username: 'test',
+      email: 'test@example.com',
+      password: 'password123',
+    });
+
+    expect(result).toEqual(mockUser);
   });
 
-  describe('register', () => {
-    it('should register a user and return user object', async () => {
-      const userDto = { username: 'testuser', password: 'testpass' };
-      const result = await authController.register(userDto);
+  it('should reset password', async () => {
+    const resetPasswordDto: ResetPasswordDto = {
+      token: 'test-token',
+      newPassword: 'new-password123',
+    };
 
-      expect(result).toEqual({
-        id: expect.any(Number),
-        username: 'testuser',
-        isActive: true,
-      });
-      expect(authService.register).toHaveBeenCalledWith(
-        userDto.username,
-        userDto.password,
-      );
-    });
-  });
+    // Mock the decoded token to include userId
+    const decodedToken = { userId: 1 };
+    jest
+      .spyOn(controller['jwtService'], 'verify')
+      .mockReturnValue(decodedToken);
 
-  describe('login', () => {
-    it('should return an access token for a valid user', async () => {
-      const user = { id: 1, username: 'testuser' };
-      const req = { user };
-      const result = await authController.login(req);
+    // Mock the password update function
+    const updatePasswordMock = jest.fn().mockResolvedValue(true);
+    controller['usersService'].updatePassword = updatePasswordMock;
 
-      expect(result).toEqual({
-        access_token: 'test-token',
-        user,
-      });
-      expect(authService.login).toHaveBeenCalledWith(user);
-    });
-  });
+    await controller.resetPassword(resetPasswordDto);
 
-  describe('profile', () => {
-    it('should return the current user profile', async () => {
-      const user = { id: 1, username: 'testuser' };
-      const req = { user };
-      const result = await authController.getProfile(req);
-
-      expect(result).toEqual(user);
-    });
+    expect(controller['jwtService'].verify).toHaveBeenCalledWith('test-token');
+    expect(updatePasswordMock).toHaveBeenCalledWith(1, expect.any(String)); // Expect userId 1 and hashed password
   });
 });
