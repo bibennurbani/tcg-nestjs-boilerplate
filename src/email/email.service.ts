@@ -11,8 +11,8 @@ export class EmailService {
     await this.mailerService.sendMail({
       to: email,
       subject: 'Email Verification',
-      template: './verification',
-      context: { url },
+      template: './verification', // Assuming the template is named verification.hbs
+      context: { url }, // Data to be passed to the template
     });
   }
 
@@ -22,8 +22,8 @@ export class EmailService {
     await this.mailerService.sendMail({
       to: email,
       subject: 'Password Reset Request',
-      template: './password-reset',
-      context: { url },
+      template: './password-reset', // Assuming the template is named password-reset.hbs
+      context: { url }, // Data to be passed to the template
     });
   }
 }

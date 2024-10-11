@@ -23,10 +23,15 @@ export class UsersService {
     return this.usersRepository.findOne({ where: { id } });
   }
 
-  async createUser(username: string, password: string): Promise<User> {
+  async createUser(
+    username: string,
+    email: string,
+    password: string,
+  ): Promise<User> {
     const hashedPassword = bcrypt.hashSync(password, 10);
     const user = this.usersRepository.create({
       username,
+      email,
       password: hashedPassword,
     });
     return this.usersRepository.save(user);

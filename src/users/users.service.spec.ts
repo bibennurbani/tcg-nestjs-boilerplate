@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { UsersService } from './users.service';
 import { User } from './user.entity';
+import * as bcrypt from 'bcryptjs';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
@@ -35,14 +36,20 @@ describe('UsersService', () => {
 
   describe('createUser', () => {
     it('should create a new user', async () => {
-      const userDto = { username: 'testuser', password: 'testpass' };
+      const userDto = {
+        username: 'testuser',
+        email: 'test@test.com',
+        password: 'testpass',
+      };
       const createdUser = { id: 1, ...userDto };
+      jest.spyOn(bcrypt, 'hashSync').mockReturnValue('testpass');
 
       mockUserRepository.create.mockReturnValue(createdUser); // Mock the create method
       mockUserRepository.save.mockResolvedValue(createdUser); // Mock the save method
 
       const result = await service.createUser(
         userDto.username,
+        userDto.email,
         userDto.password,
       );
 

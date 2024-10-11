@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
 import { ConfigService } from '@nestjs/config';
@@ -16,7 +16,7 @@ export class AuthService {
 
   async validateUser(username: string, pass: string): Promise<any> {
     const user = await this.usersService.findOneByUsername(username);
-    if (user && bcrypt.compareSync(pass, user.password)) {
+    if (user && (await bcrypt.compare(pass, user.password))) {
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { password, ...result } = user;
       return result;
@@ -31,11 +31,18 @@ export class AuthService {
     };
   }
 
-  async register(username: string, password: string) {
+  async register(username: string, email: string, password: string) {
     const hashedPassword = bcrypt.hashSync(password, 10);
-    const user = await this.usersService.createUser(username, hashedPassword);
+    const user = await this.usersService.createUser(
+      username,
+      email,
+      hashedPassword,
+    );
 
-    const verificationToken = this.jwtService.sign({ userId: user.id });
+    const verificationToken = this.jwtService.sign(
+      { userId: user.id },
+      { expiresIn: '1h' },
+    );
     await this.emailService.sendVerificationEmail(
       user.email,
       verificationToken,
@@ -46,9 +53,12 @@ export class AuthService {
 
   async sendPasswordResetEmail(email: string) {
     const user = await this.usersService.findOneByEmail(email);
-    if (!user) throw new Error('User not found');
+    if (!user) throw new NotFoundException('User not found');
 
-    const resetToken = this.jwtService.sign({ userId: user.id });
+    const resetToken = this.jwtService.sign(
+      { userId: user.id },
+      { expiresIn: '15m' },
+    );
     await this.emailService.sendPasswordResetEmail(user.email, resetToken);
   }
 
