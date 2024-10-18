@@ -7,7 +7,7 @@ import { UsersModule } from '../users/users.module'; // Import Users Module
 import { JwtStrategy } from './strategy/jwt.strategy';
 import { LocalStrategy } from './strategy/local.strategy';
 import { jwtConstants } from './utils/constant';
-import { EmailService } from 'src/email/email.service';
+import { EmailService } from '../email/email.service';
 
 @Module({
   imports: [
