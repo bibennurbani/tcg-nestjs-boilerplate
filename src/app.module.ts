@@ -6,15 +6,7 @@ import { ConfigModule } from './config/config.module';
 import { DatabaseModule } from './database/database.module';
 
 @Module({
-  imports: [
-    ConfigModule,
-    DatabaseModule,
-    EmailModule,
-    AuthModule,
-    UsersModule,
-    ConfigModule,
-    DatabaseModule,
-  ],
+  imports: [ConfigModule, EmailModule, AuthModule, UsersModule, DatabaseModule],
   providers: [],
 })
 export class AppModule {}
