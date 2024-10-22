@@ -37,11 +37,11 @@ export class UsersService {
     return this.usersRepository.save(user);
   }
 
-  async verifyUser(id: number): Promise<void> {
+  async verifyUser(id: string): Promise<void> {
     await this.usersRepository.update(id, { isEmailVerified: true });
   }
 
-  async updatePassword(id: number, newPassword: string): Promise<void> {
+  async updatePassword(id: string, newPassword: string): Promise<void> {
     const hashedPassword = bcrypt.hashSync(newPassword, 10);
     await this.usersRepository.update(id, { password: hashedPassword });
   }

@@ -9,11 +9,9 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import * as bcrypt from 'bcryptjs';
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './guard/jwt-auth.guard';
 import { LocalAuthGuard } from './guard/local-auth.guard';
-import { UsersService } from '../users/users.service';
 import { ResetPasswordDto } from './dto/ResetPasswordDto';
 
 @Controller('auth')
@@ -21,7 +19,6 @@ export class AuthController {
   constructor(
     private authService: AuthService,
     private jwtService: JwtService,
-    private usersService: UsersService,
   ) {}
 
   @Post('register')
@@ -58,7 +55,7 @@ export class AuthController {
       const decoded = this.jwtService.verify(token);
       const userId = decoded.userId;
 
-      await this.usersService.verifyUser(userId);
+      await this.authService.verifyUser(userId);
       return { message: 'Email verified successfully' };
     } catch (err) {
       throw new HttpException(
@@ -72,11 +69,7 @@ export class AuthController {
   async resetPassword(@Body() body: ResetPasswordDto) {
     try {
       const { token, newPassword } = body;
-      const decoded = this.jwtService.verify(token);
-      const userId = decoded.userId;
-
-      const hashedPassword = await bcrypt.hash(newPassword, 10);
-      await this.usersService.updatePassword(userId, hashedPassword);
+      await this.authService.resetPassword(token, newPassword);
 
       return { message: 'Password updated successfully' };
     } catch (err) {

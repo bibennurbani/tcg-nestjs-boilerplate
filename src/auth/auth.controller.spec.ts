@@ -20,6 +20,7 @@ describe('AuthController', () => {
             register: jest.fn(),
             login: jest.fn(),
             sendPasswordResetEmail: jest.fn(),
+            resetPassword: jest.fn(),
           },
         },
         {
@@ -37,6 +38,10 @@ describe('AuthController', () => {
 
     controller = module.get<AuthController>(AuthController);
     authService = module.get<AuthService>(AuthService);
+  });
+
+  it('should be defined', () => {
+    expect(controller).toBeDefined();
   });
 
   it('should register a new user', async () => {
@@ -65,19 +70,12 @@ describe('AuthController', () => {
       newPassword: 'new-password123',
     };
 
-    // Mock the decoded token to include userId
-    const decodedToken = { userId: 1 };
-    jest
-      .spyOn(controller['jwtService'], 'verify')
-      .mockReturnValue(decodedToken);
+    const result = await controller.resetPassword(resetPasswordDto);
 
-    // Mock the password update function
-    const updatePasswordMock = jest.fn().mockResolvedValue(true);
-    controller['usersService'].updatePassword = updatePasswordMock;
-
-    await controller.resetPassword(resetPasswordDto);
-
-    expect(controller['jwtService'].verify).toHaveBeenCalledWith('test-token');
-    expect(updatePasswordMock).toHaveBeenCalledWith(1, expect.any(String)); // Expect userId 1 and hashed password
+    expect(authService.resetPassword).toHaveBeenCalledWith(
+      resetPasswordDto.token,
+      resetPasswordDto.newPassword,
+    );
+    expect(result).toEqual({ message: 'Password updated successfully' });
   });
 });

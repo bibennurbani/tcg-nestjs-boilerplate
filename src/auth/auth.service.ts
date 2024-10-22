@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  HttpException,
+  HttpStatus,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
 import { ConfigService } from '@nestjs/config';
@@ -51,6 +56,21 @@ export class AuthService {
     return user;
   }
 
+  async resetPassword(token: string, newPassword: string) {
+    try {
+      const decoded = this.jwtService.verify(token);
+      const userId = decoded.userId;
+
+      const hashedPassword = bcrypt.hashSync(newPassword, 10);
+      await this.usersService.updatePassword(userId, hashedPassword);
+    } catch (err) {
+      throw new HttpException(
+        'Invalid or expired token, err:' + err,
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+  }
+
   async sendPasswordResetEmail(email: string) {
     const user = await this.usersService.findOneByEmail(email);
     if (!user) throw new NotFoundException('User not found');
@@ -60,6 +80,10 @@ export class AuthService {
       { expiresIn: '15m' },
     );
     await this.emailService.sendPasswordResetEmail(user.email, resetToken);
+  }
+
+  async verifyUser(userId: string) {
+    await this.usersService.verifyUser(userId);
   }
 
   getJwtSecret() {
